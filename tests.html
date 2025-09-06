@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP 指令產生器 - 測試套件</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* 測試專用樣式 */
+        .test-runner {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            align-items: center;
+        }
+        
+        .test-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .test-summary-card {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .test-summary-card.passed {
+            border-color: var(--color-success);
+            background: #f0fdf4;
+        }
+        
+        .test-summary-card.failed {
+            border-color: var(--color-error);
+            background: #fef2f2;
+        }
+        
+        .test-summary-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .test-summary-card.passed .test-summary-number {
+            color: var(--color-success);
+        }
+        
+        .test-summary-card.failed .test-summary-number {
+            color: var(--color-error);
+        }
+        
+        .test-results {
+            margin-top: var(--spacing-lg);
+        }
+        
+        .test-case {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-md);
+            overflow: hidden;
+        }
+        
+        .test-case-header {
+            padding: var(--spacing-md);
+            background: var(--bg-tertiary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .test-case-header:hover {
+            background: var(--border-color);
+        }
+        
+        .test-case-header.passed {
+            background: #f0fdf4;
+            border-left: 4px solid var(--color-success);
+        }
+        
+        .test-case-header.failed {
+            background: #fef2f2;
+            border-left: 4px solid var(--color-error);
+        }
+        
+        .test-case-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .test-case-status {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .test-case-status.passed {
+            background: var(--color-success);
+            color: white;
+        }
+        
+        .test-case-status.failed {
+            background: var(--color-error);
+            color: white;
+        }
+        
+        .test-case-content {
+            display: none;
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .test-case-content.expanded {
+            display: block;
+        }
+        
+        .test-case-details {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+        
+        .test-detail-section {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+        
+        .test-detail-header {
+            background: var(--bg-tertiary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .test-detail-content {
+            padding: var(--spacing-md);
+            background: var(--bg-code);
+            color: var(--text-code);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-x: auto;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-success));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            background: transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        
+        .filter-btn.active {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+        
+        .comparison-section {
+            margin-top: var(--spacing-2xl);
+        }
+        
+        .comparison-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+        }
+        
+        .comparison-side {
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+        
+        .comparison-side h4 {
+            padding: var(--spacing-sm) var(--spacing-md);
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .comparison-expected h4 {
+            background: var(--color-success);
+            color: white;
+        }
+        
+        .comparison-actual h4 {
+            background: var(--color-info);
+            color: white;
+        }
+        
+        .comparison-content {
+            padding: var(--spacing-md);
+            background: var(--bg-code);
+            color: var(--text-code);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 60px;
+        }
+        
+        @media (max-width: 768px) {
+            .comparison-item {
+                grid-template-columns: 1fr;
+            }
+            
+            .test-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 標題區 -->
+        <header class="header">
+            <h1>🧪 MCP 指令產生器測試套件</h1>
+            <p>驗證 MCP JSON 到 Claude Code 指令的轉換正確性</p>
+        </header>
+
+        <!-- 測試執行器 -->
+        <section class="test-runner">
+            <h2>🚀 測試執行器</h2>
+            
+            <div class="test-controls">
+                <button id="runAllTests" class="generate-btn">執行所有測試</button>
+                <button id="runStdioTests" class="add-btn">執行 stdio 測試</button>
+                <button id="runSseTests" class="add-btn">執行 SSE 測試</button>
+                <button id="runHttpTests" class="add-btn">執行 HTTP 測試</button>
+                <button id="runErrorTests" class="add-btn">執行錯誤測試</button>
+                <button id="clearResults" class="remove-env">清空結果</button>
+            </div>
+            
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <!-- 測試摘要 -->
+            <div class="test-summary" id="testSummary" style="display: none;">
+                <div class="test-summary-card" id="totalCard">
+                    <div class="test-summary-number" id="totalCount">0</div>
+                    <div>總測試數</div>
+                </div>
+                <div class="test-summary-card passed" id="passedCard">
+                    <div class="test-summary-number" id="passedCount">0</div>
+                    <div>通過</div>
+                </div>
+                <div class="test-summary-card failed" id="failedCard">
+                    <div class="test-summary-number" id="failedCount">0</div>
+                    <div>失敗</div>
+                </div>
+                <div class="test-summary-card" id="passRateCard">
+                    <div class="test-summary-number" id="passRate">0%</div>
+                    <div>通過率</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 測試結果 -->
+        <section class="test-results" id="testResults" style="display: none;">
+            <h2>📊 測試結果</h2>
+            
+            <!-- 篩選控制 -->
+            <div class="filter-controls">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="passed">通過</button>
+                <button class="filter-btn" data-filter="failed">失敗</button>
+                <button class="filter-btn" data-filter="stdio">stdio</button>
+                <button class="filter-btn" data-filter="sse">SSE</button>
+                <button class="filter-btn" data-filter="http">HTTP</button>
+                <button class="filter-btn" data-filter="errors">錯誤</button>
+            </div>
+            
+            <div id="testCases"></div>
+        </section>
+
+        <!-- 官方範例比較 -->
+        <section class="comparison-section">
+            <h2>🔍 官方範例比較</h2>
+            <p>以下是我們的工具產生的指令與官方文件中範例的比較：</p>
+            
+            <div id="officialComparisons">
+                <!-- 官方範例比較將在這裡動態生成 -->
+            </div>
+        </section>
+
+        <!-- 手動測試區域 -->
+        <section>
+            <h2>🔧 手動測試</h2>
+            <p>您可以手動輸入設定進行測試：</p>
+            
+            <div class="form-group">
+                <label for="manualServerName">伺服器名稱：</label>
+                <input type="text" id="manualServerName" placeholder="例：test-server" />
+            </div>
+            
+            <div class="form-group">
+                <label for="manualJsonInput">JSON 設定：</label>
+                <textarea id="manualJsonInput" rows="10" placeholder="貼上 JSON 設定..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <button id="runManualTest" class="generate-btn">執行測試</button>
+            </div>
+            
+            <div id="manualTestResult" style="display: none;">
+                <h3>測試結果：</h3>
+                <div class="comparison-item">
+                    <div class="comparison-side comparison-expected">
+                        <h4>產生的指令</h4>
+                        <div class="comparison-content" id="manualGenerated"></div>
+                    </div>
+                    <div class="comparison-side comparison-actual">
+                        <h4>驗證結果</h4>
+                        <div class="comparison-content" id="manualValidation"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 回到主頁 -->
+        <section>
+            <div style="text-align: center; margin-top: var(--spacing-2xl);">
+                <a href="index.html" class="generate-btn">← 回到主頁</a>
+            </div>
+        </section>
+    </div>
+
+    <!-- 載入腳本 -->
+    <script src="validator.js"></script>
+    <script src="converter.js"></script>
+    <script src="test-data.js"></script>
+    
+    <script>
+        class TestRunner {
+            constructor() {
+                this.results = [];
+                this.currentFilter = 'all';
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.setupOfficialComparisons();
+            }
+
+            bindEvents() {
+                document.getElementById('runAllTests').addEventListener('click', () => this.runTests('all'));
+                document.getElementById('runStdioTests').addEventListener('click', () => this.runTests('stdio'));
+                document.getElementById('runSseTests').addEventListener('click', () => this.runTests('sse'));
+                document.getElementById('runHttpTests').addEventListener('click', () => this.runTests('http'));
+                document.getElementById('runErrorTests').addEventListener('click', () => this.runTests('errors'));
+                document.getElementById('clearResults').addEventListener('click', () => this.clearResults());
+                document.getElementById('runManualTest').addEventListener('click', () => this.runManualTest());
+
+                // 篩選按鈕
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.setFilter(btn.dataset.filter));
+                });
+            }
+
+            async runTests(category) {
+                this.showProgress(true);
+                this.results = [];
+
+                const testCases = category === 'all' 
+                    ? getAllTestCases() 
+                    : Object.values(getTestCasesByType(category)).map(tc => ({...tc, category}));
+
+                for (let i = 0; i < testCases.length; i++) {
+                    const testCase = testCases[i];
+                    this.updateProgress((i / testCases.length) * 100);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 10)); // 小延遲讓 UI 更新
+                    
+                    const result = this.runSingleTest(testCase);
+                    this.results.push(result);
+                }
+
+                this.updateProgress(100);
+                this.displayResults();
+                setTimeout(() => this.showProgress(false), 500);
+            }
+
+            runSingleTest(testCase) {
+                try {
+                    const jsonInput = typeof testCase.config === 'string' 
+                        ? testCase.config 
+                        : JSON.stringify(testCase.config);
+                    
+                    const options = {
+                        scope: testCase.scope || 'local',
+                        envVars: {},
+                        autoDetectType: true
+                    };
+
+                    // 驗證輸入
+                    const validation = mcpValidator.validateInput(jsonInput, testCase.name);
+                    
+                    // 轉換指令
+                    const conversion = mcpConverter.convert(jsonInput, testCase.name, options);
+                    
+                    // 檢查結果
+                    const testResult = {
+                        testCase,
+                        validation,
+                        conversion,
+                        passed: false,
+                        message: ''
+                    };
+
+                    if (testCase.expectError) {
+                        testResult.passed = !validation.valid || !conversion.success;
+                        testResult.message = testResult.passed ? '正確檢測到錯誤' : '應該產生錯誤但沒有';
+                    } else {
+                        testResult.passed = validation.valid && conversion.success;
+                        if (testCase.expectedCommand) {
+                            const expectedNorm = testCase.expectedCommand.replace(/\s+/g, ' ').trim();
+                            const actualNorm = conversion.command ? conversion.command.replace(/\s+/g, ' ').trim() : '';
+                            testResult.passed = testResult.passed && expectedNorm === actualNorm;
+                            testResult.message = testResult.passed ? '指令匹配' : '指令不匹配';
+                        } else {
+                            testResult.message = testResult.passed ? '轉換成功' : '轉換失敗';
+                        }
+                    }
+
+                    return testResult;
+                } catch (error) {
+                    return {
+                        testCase,
+                        passed: false,
+                        error: error.message,
+                        message: '測試執行錯誤'
+                    };
+                }
+            }
+
+            displayResults() {
+                const passed = this.results.filter(r => r.passed).length;
+                const total = this.results.length;
+                const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
+
+                // 更新摘要
+                document.getElementById('totalCount').textContent = total;
+                document.getElementById('passedCount').textContent = passed;
+                document.getElementById('failedCount').textContent = total - passed;
+                document.getElementById('passRate').textContent = passRate + '%';
+
+                // 顯示摘要
+                document.getElementById('testSummary').style.display = 'block';
+                document.getElementById('testResults').style.display = 'block';
+
+                // 顯示測試案例
+                this.renderTestCases();
+            }
+
+            renderTestCases() {
+                const container = document.getElementById('testCases');
+                const filteredResults = this.filterResults();
+
+                container.innerHTML = filteredResults.map(result => `
+                    <div class="test-case" data-category="${result.testCase.category}">
+                        <div class="test-case-header ${result.passed ? 'passed' : 'failed'}" onclick="this.nextElementSibling.classList.toggle('expanded')">
+                            <div class="test-case-title">
+                                <span>${result.passed ? '✅' : '❌'}</span>
+                                <span>${result.testCase.displayName || result.testCase.name}</span>
+                                <small style="color: var(--text-muted);">(${result.testCase.category})</small>
+                            </div>
+                            <div class="test-case-status ${result.passed ? 'passed' : 'failed'}">
+                                ${result.passed ? 'PASS' : 'FAIL'}
+                            </div>
+                        </div>
+                        <div class="test-case-content">
+                            ${this.renderTestDetails(result)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderTestDetails(result) {
+                const sections = [];
+
+                // 輸入設定
+                sections.push(`
+                    <div class="test-detail-section">
+                        <div class="test-detail-header">輸入設定</div>
+                        <div class="test-detail-content">${typeof result.testCase.config === 'string' 
+                            ? result.testCase.config 
+                            : JSON.stringify(result.testCase.config, null, 2)}</div>
+                    </div>
+                `);
+
+                // 期望結果
+                if (result.testCase.expectedCommand) {
+                    sections.push(`
+                        <div class="test-detail-section">
+                            <div class="test-detail-header">期望指令</div>
+                            <div class="test-detail-content">${result.testCase.expectedCommand}</div>
+                        </div>
+                    `);
+                }
+
+                // 實際結果
+                if (result.conversion && result.conversion.command) {
+                    sections.push(`
+                        <div class="test-detail-section">
+                            <div class="test-detail-header">實際指令</div>
+                            <div class="test-detail-content">${result.conversion.command}</div>
+                        </div>
+                    `);
+                }
+
+                // 錯誤訊息
+                if (!result.passed) {
+                    const errorMsg = result.error || 
+                        (result.validation && !result.validation.valid ? result.validation.errors.join('\n') : '') ||
+                        (result.conversion && !result.conversion.success ? result.conversion.error : '') ||
+                        '未知錯誤';
+                    
+                    sections.push(`
+                        <div class="test-detail-section">
+                            <div class="test-detail-header">錯誤訊息</div>
+                            <div class="test-detail-content">${errorMsg}</div>
+                        </div>
+                    `);
+                }
+
+                return `<div class="test-case-details">${sections.join('')}</div>`;
+            }
+
+            filterResults() {
+                if (this.currentFilter === 'all') return this.results;
+                
+                return this.results.filter(result => {
+                    if (this.currentFilter === 'passed') return result.passed;
+                    if (this.currentFilter === 'failed') return !result.passed;
+                    return result.testCase.category === this.currentFilter;
+                });
+            }
+
+            setFilter(filter) {
+                this.currentFilter = filter;
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === filter);
+                });
+                if (this.results.length > 0) {
+                    this.renderTestCases();
+                }
+            }
+
+            showProgress(show) {
+                document.getElementById('progressBar').style.display = show ? 'block' : 'none';
+            }
+
+            updateProgress(percent) {
+                document.getElementById('progressFill').style.width = percent + '%';
+            }
+
+            clearResults() {
+                this.results = [];
+                document.getElementById('testSummary').style.display = 'none';
+                document.getElementById('testResults').style.display = 'none';
+                document.getElementById('testCases').innerHTML = '';
+            }
+
+            runManualTest() {
+                const serverName = document.getElementById('manualServerName').value;
+                const jsonInput = document.getElementById('manualJsonInput').value;
+
+                if (!jsonInput.trim()) {
+                    alert('請輸入 JSON 設定');
+                    return;
+                }
+
+                try {
+                    const validation = mcpValidator.validateInput(jsonInput, serverName);
+                    const conversion = mcpConverter.convert(jsonInput, serverName, {
+                        scope: 'local',
+                        envVars: {},
+                        autoDetectType: true
+                    });
+
+                    document.getElementById('manualGenerated').textContent = 
+                        conversion.success ? conversion.command : '轉換失敗: ' + conversion.error;
+                    
+                    document.getElementById('manualValidation').textContent = 
+                        validation.valid ? '✅ 驗證通過' : '❌ 驗證失敗:\n' + validation.errors.join('\n');
+                    
+                    document.getElementById('manualTestResult').style.display = 'block';
+                } catch (error) {
+                    document.getElementById('manualGenerated').textContent = '執行錯誤: ' + error.message;
+                    document.getElementById('manualValidation').textContent = '無法驗證';
+                    document.getElementById('manualTestResult').style.display = 'block';
+                }
+            }
+
+            setupOfficialComparisons() {
+                // 設定一些官方範例比較
+                const officialExamples = [
+                    {
+                        name: 'airtable',
+                        official: 'claude mcp add airtable --env AIRTABLE_API_KEY=YOUR_KEY -- npx -y airtable-mcp-server',
+                        config: {
+                            command: 'npx',
+                            args: ['-y', 'airtable-mcp-server'],
+                            env: {
+                                AIRTABLE_API_KEY: 'YOUR_KEY'
+                            }
+                        }
+                    },
+                    {
+                        name: 'linear',
+                        official: 'claude mcp add --transport sse linear https://mcp.linear.app/sse',
+                        config: {
+                            type: 'sse',
+                            url: 'https://mcp.linear.app/sse'
+                        }
+                    }
+                ];
+
+                const container = document.getElementById('officialComparisons');
+                container.innerHTML = officialExamples.map(example => {
+                    const result = mcpConverter.convert(JSON.stringify(example.config), example.name, {
+                        scope: 'local',
+                        envVars: {},
+                        autoDetectType: true
+                    });
+
+                    return `
+                        <div class="comparison-item">
+                            <div class="comparison-side comparison-expected">
+                                <h4>官方範例 (${example.name})</h4>
+                                <div class="comparison-content">${example.official}</div>
+                            </div>
+                            <div class="comparison-side comparison-actual">
+                                <h4>我們的產生結果</h4>
+                                <div class="comparison-content">${result.success ? result.command : '錯誤: ' + result.error}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 初始化測試執行器
+        document.addEventListener('DOMContentLoaded', () => {
+            new TestRunner();
+        });
+    </script>
+</body>
+</html>

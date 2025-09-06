@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code MCP 指令產生器</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 標題區 -->
+        <header class="header">
+            <h1>🔧 Claude Code MCP 指令產生器</h1>
+            <p>輕鬆將 MCP JSON 設定檔轉換為 Claude Code 安裝指令</p>
+        </header>
+
+        <!-- 輸入區域 -->
+        <section class="input-section">
+            <h2>📋 輸入 MCP 設定</h2>
+            
+            <!-- 伺服器名稱 -->
+            <div class="form-group">
+                <label for="serverName">伺服器名稱：</label>
+                <input type="text" id="serverName" placeholder="例：airtable, sentry, github" />
+            </div>
+
+            <!-- JSON 輸入 -->
+            <div class="form-group">
+                <label for="jsonInput">MCP JSON 設定：</label>
+                <textarea id="jsonInput" placeholder="貼上您的 .mcp.json 設定檔內容或單一伺服器設定..." rows="15"></textarea>
+                <div class="input-hint">
+                    <strong>📝 格式說明：</strong><br>
+                    • <strong>完整設定檔</strong>：第一層必須使用 <code>"mcpServers"</code> 作為鍵名<br>
+                    • <strong>單一伺服器設定</strong>：可直接貼上伺服器物件內容<br>
+                    • <strong>常見錯誤</strong>：請勿使用 <code>"servers"</code>、<code>"server"</code> 等錯誤鍵名
+                </div>
+                
+                <div class="format-examples">
+                    <details>
+                        <summary>📚 格式範例</summary>
+                        <div class="format-example">
+                            <h4>✅ 完整設定檔格式：</h4>
+                            <pre><code>{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["server-package"]
+    }
+  }
+}</code></pre>
+                        </div>
+                        <div class="format-example">
+                            <h4>✅ 單一伺服器設定格式：</h4>
+                            <pre><code>{
+  "url": "https://api.example.com/mcp",
+  "headers": {
+    "Authorization": "Bearer token"
+  }
+}</code></pre>
+                        </div>
+                        <div class="format-example error-example">
+                            <h4>❌ 錯誤格式：</h4>
+                            <pre><code>{
+  "servers": {  // ← 錯誤！應該使用 "mcpServers"
+    "server-name": {...}
+  }
+}</code></pre>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <!-- 選項區域 -->
+        <section class="options-section">
+            <h2>⚙️ 安裝選項</h2>
+            
+            <!-- Scope 選擇 -->
+            <div class="form-group">
+                <label for="scope">設定範圍：</label>
+                <select id="scope">
+                    <option value="">預設 (local)</option>
+                    <option value="local">Local - 僅當前目錄</option>
+                    <option value="project">Project - 整個專案（團隊共享）</option>
+                    <option value="user">User - 使用者全域</option>
+                </select>
+            </div>
+
+            <!-- 環境變數設定 -->
+            <div class="form-group">
+                <label>環境變數設定：</label>
+                <div id="envVars">
+                    <div class="env-var-item">
+                        <input type="text" placeholder="變數名" class="env-key" />
+                        <input type="text" placeholder="變數值" class="env-value" />
+                        <button type="button" class="remove-env">×</button>
+                    </div>
+                </div>
+                <button type="button" id="addEnvVar" class="add-btn">+ 新增環境變數</button>
+            </div>
+
+            <!-- 進階選項 -->
+            <div class="form-group advanced-options">
+                <label>
+                    <input type="checkbox" id="autoDetectType" checked />
+                    自動偵測伺服器類型 (stdio/sse/http)
+                </label>
+                
+                <!-- 手動選擇伺服器類型 -->
+                <div id="manualServerType" class="manual-server-type" style="display: none;">
+                    <label for="serverType">伺服器類型：</label>
+                    <select id="serverType">
+                        <option value="stdio">stdio - 本地程序 (command + args)</option>
+                        <option value="sse">sse - Server-Sent Events 即時推送</option>
+                        <option value="http">http - HTTP API (預設)</option>
+                    </select>
+                    <div class="input-hint">
+                        手動指定伺服器類型，將覆蓋自動偵測結果
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 輸出區域 -->
+        <section class="output-section">
+            <h2>🚀 產生的指令</h2>
+            
+            <div class="output-container">
+                <pre id="commandOutput" class="command-output">在此處會顯示產生的 Claude Code 指令...</pre>
+                <div class="output-actions">
+                    <button id="copyCommand" class="copy-btn">📋 複製指令</button>
+                    <button id="generateCommand" class="generate-btn">🔄 重新產生</button>
+                </div>
+            </div>
+            
+            <!-- 錯誤訊息 -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            
+            <!-- 成功訊息 -->
+            <div id="successMessage" class="success-message" style="display: none;">
+                ✅ 指令已複製到剪貼簿！
+            </div>
+        </section>
+
+
+        <!-- 說明區域 -->
+        <section class="help-section">
+            <h2>❓ 使用說明</h2>
+            
+            <div class="help-content">
+                <div class="help-item">
+                    <h3>1. 輸入設定</h3>
+                    <p>在上方文字區域貼上您的 MCP JSON 設定檔內容，可以是完整的 .mcp.json 檔案或單一伺服器設定。</p>
+                </div>
+                
+                <div class="help-item">
+                    <h3>2. 選擇選項</h3>
+                    <p>選擇安裝範圍（local/project/user）並設定必要的環境變數。</p>
+                </div>
+                
+                <div class="help-item">
+                    <h3>3. 產生指令</h3>
+                    <p>系統會自動產生對應的 Claude Code MCP 安裝指令，您可以直接複製使用。</p>
+                </div>
+                
+                <div class="help-item">
+                    <h3>4. 測試指令</h3>
+                    <p>將產生的指令貼到終端機中執行即可安裝 MCP 伺服器。</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 腳本 -->
+    <script src="validator.js"></script>
+    <script src="converter.js"></script>
+    <script src="test-data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
