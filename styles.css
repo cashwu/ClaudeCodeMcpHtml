@@ -81,6 +81,7 @@ body {
 
 /* 標題區 */
 .header {
+    position: relative;
     text-align: center;
     margin-bottom: var(--spacing-2xl);
     padding: var(--spacing-xl) 0;
@@ -99,6 +100,72 @@ body {
 .header p {
     font-size: 1.1rem;
     opacity: 0.9;
+}
+
+/* GitHub 連結 */
+.github-link {
+    position: absolute;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: white;
+    text-decoration: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.github-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.github-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+.github-link:hover .github-icon {
+    transform: scale(1.1);
+}
+
+/* 響應式設計 - GitHub 連結 */
+@media (max-width: 768px) {
+    .github-link {
+        top: var(--spacing-md);
+        right: var(--spacing-md);
+        width: 40px;
+        height: 40px;
+    }
+    
+    .github-icon {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .github-link {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+        width: 36px;
+        height: 36px;
+    }
+    
+    .github-icon {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 /* 區段樣式 */
